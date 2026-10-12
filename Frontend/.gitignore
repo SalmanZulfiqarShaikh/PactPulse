@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-ssr/
+
+# Local env (VITE_API_URL overrides)
+.env
+.env.local
+*.local
+
+*.log
+npm-debug.log*
+.DS_Store

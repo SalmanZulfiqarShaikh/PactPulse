@@ -1,0 +1,11 @@
+# Repository-wide ignores. Each app also has its own .gitignore for the files
+# that only matter to it (venv, node_modules, uploads, the local Mongo data
+# directory).
+
+# Local tooling and assistant state. Editor/agent config, not part of the app.
+.claude/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+Desktop.ini

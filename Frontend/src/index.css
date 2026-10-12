@@ -1,0 +1,68 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Anchor links on the landing page scroll rather than jump. Wrapped in the
+     no-preference query so a reader who has asked their system for less motion
+     gets the jump, which is the accessible default. */
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    @apply bg-stone-50 text-stone-900 antialiased dark:bg-stone-950 dark:text-stone-100;
+  }
+
+  /* A single visible focus treatment across the app, for keyboard users. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-accent-600 ring-offset-2 ring-offset-stone-50 dark:ring-accent-400 dark:ring-offset-stone-950;
+  }
+
+  ::selection {
+    @apply bg-accent-200 text-accent-950;
+  }
+}
+
+@layer utilities {
+  /* Contract text preserves the source line breaks and wraps rather than
+     scrolling horizontally, which is what makes long clauses readable on a
+     phone. */
+  .preserve-whitespace {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media print {
+  /* The app chrome is navigation, not document, so it stays off the page.
+     Marked-up elements opt out explicitly; the layout elements are named here
+     so a print from any page comes out clean. */
+  .no-print,
+  aside,
+  header,
+  nav {
+    display: none !important;
+  }
+
+  body {
+    @apply bg-white text-black;
+  }
+
+  /* Collapsed clauses would vanish from the printout, so the report's cards
+     keep their borders and break across pages rather than being clipped. */
+  main {
+    padding: 0 !important;
+  }
+
+  .rounded-lg,
+  blockquote {
+    break-inside: avoid;
+  }
+}
