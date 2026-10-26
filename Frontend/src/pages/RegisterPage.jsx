@@ -86,8 +86,9 @@ export function RegisterPage() {
     setFormError(null)
 
     try {
-      await register({ email: normaliseEmail(email), password })
-      navigate(returnTo, { replace: true })
+      const address = normaliseEmail(email)
+      await register({ email: address, password })
+      navigate('/verify', { state: { email: address, from: returnTo } })
     } catch (error) {
       // A duplicate address comes back as 409 with the server's own wording,
       // which is clearer than anything written here.

@@ -60,8 +60,12 @@ export function AuthProvider({ children }) {
     return data
   }, [])
 
-  const register = useCallback(async ({ email, password }) => {
-    const data = await api.register({ email, password })
+  // Registering does not sign in: the account starts unverified and a code is
+  // emailed. verifyEmail completes it and signs in.
+  const register = useCallback(({ email, password }) => api.register({ email, password }), [])
+
+  const verifyEmail = useCallback(async ({ email, code }) => {
+    const data = await api.verifyEmail({ email, code })
     setAccessToken(data?.access_token ?? null)
     setUser({ user_id: data?.user_id ?? null, email: data?.email ?? email })
     return data
@@ -83,8 +87,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   const value = useMemo(
-    () => ({ user, status, isAuthenticated: Boolean(user), login, register, logout }),
-    [user, status, login, register, logout],
+    () => ({ user, status, isAuthenticated: Boolean(user), login, register, verifyEmail, logout }),
+    [user, status, login, register, verifyEmail, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

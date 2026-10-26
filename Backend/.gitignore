@@ -12,10 +12,11 @@ __pycache__/
 
 # Local MongoDB data directory (thousands of WiredTiger files, rewritten on
 # every server start). Run Mongo via docker-compose instead of committing it.
-data/db/
+data/
 
-# Uploaded contracts
+# Uploaded contracts and the local vector store (rebuilt from the database)
 uploads/
+qdrant_data/
 
 # Server and ad-hoc script output
 *.log

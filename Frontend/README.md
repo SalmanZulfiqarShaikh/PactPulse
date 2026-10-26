@@ -86,7 +86,7 @@ it from memory, so the UI is correct either way; this only matters if someone ca
 | `/login`, `/register` | Public | Redirect to `/app` if already signed in |
 | `/app` | Signed in | Contracts: search, status filter, sort, delete |
 | `/app/upload` | Signed in | Drag-and-drop upload, then straight into the analysis |
-| `/app/contracts/:id` | Signed in | Report, analysis status, extracted text, delete |
+| `/app/contracts/:id` | Signed in | Report, clause checklist, document chat, extracted text with highlighting, delete |
 | `/app/account` | Signed in | Email, log out, backend reachability |
 | anything else | — | 404 page |
 
@@ -99,10 +99,13 @@ after you sign in.
 src/
   api/client.js        every HTTP call; the only place fetch/XHR is used
   components/          feature components (ReportView, RiskCard, ContractTable, FileDropzone, ...)
+  components/contract/ AnalysisSection, DocumentText (highlightable)
+  components/chat/     ChatPanel, ChatMessage (Markdown + [P#] citation chips)
+  components/report/   ChecklistCard, QuoteCheckBadge
   components/ui/       primitives (Button, Card, Badge, Modal, Input, Skeleton, ...)
   components/layout/   AppShell, Sidebar, MobileNav, ThemeToggle
   context/             AuthContext, ThemeContext
-  hooks/               useContracts, useAnalysis, useDebouncedValue, useMediaQuery
+  hooks/               useContracts, useAnalysis, useChat, useDebouncedValue, useMediaQuery
   lib/                 constants, format, credentials, report, severity, validateFile
   pages/               Landing, LoginPage, RegisterPage, Dashboard, UploadPage, ContractPage,
                        AccountPage, NotFound
@@ -120,6 +123,11 @@ src/
 - **Old reports still open.** Reports written before the plain-language rewrite lack
   `reading_level: "plain"`. They render in their original wording, with a note offering to re-analyze
   and a confirmation before replacing the report.
+- **Chat sits beside the report.** On wide screens it is a sticky side panel; below 1024px it is a
+  full-screen sheet behind an "Ask the document" button. It is lazy-loaded, so its Markdown
+  renderer is only downloaded on contract pages.
+- **Citations and quotes highlight the source.** "Show in document" on a finding, or a citation
+  chip in a chat answer, opens the document text and scrolls to the highlighted range.
 - **Theme** follows the system by default and can be pinned to light or dark. The stored preference
   is applied by an inline script in `index.html` before first paint, so there is no flash.
 - **Print** on the contract page prints the report. Use "Expand all" first if you want the clause

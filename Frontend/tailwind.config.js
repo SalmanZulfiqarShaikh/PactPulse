@@ -33,6 +33,8 @@ export default {
           'Arial',
           'sans-serif',
         ],
+        grotesk: ['"Schibsted Grotesk"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        document: ['"Source Serif 4"', 'Georgia', 'serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       maxWidth: {
@@ -50,12 +52,18 @@ export default {
           from: { opacity: '0' },
           to: { opacity: '1' },
         },
+        // The landing page's one moment: a highlighter pen drawn across a clause.
+        highlight: {
+          from: { backgroundSize: '0% 100%' },
+          to: { backgroundSize: '100% 100%' },
+        },
       },
       animation: {
         // `both` so a delayed element holds the `from` state until its turn
         // rather than flashing at full opacity first.
         'fade-up': 'fade-up 500ms cubic-bezier(0.16, 1, 0.3, 1) both',
         'fade-in': 'fade-in 250ms ease-out both',
+        highlight: 'highlight 900ms cubic-bezier(0.65, 0, 0.35, 1) both',
       },
     },
   },

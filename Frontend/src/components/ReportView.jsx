@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { Check, ChevronDown, Copy, ShieldCheck } from 'lucide-react'
 
 import { RiskCard } from './RiskCard'
+import { ChecklistCard } from './report/ChecklistCard'
 import { Alert } from './ui/Alert'
 import { Button } from './ui/Button'
 import { Card, CardBody, CardHeader } from './ui/Card'
@@ -44,7 +45,13 @@ function Fact({ label, children }) {
  * details, then the flagged clauses. Everything maps to a field the API
  * actually returns - an empty list says so rather than being padded out.
  */
-export function ReportView({ insights, contractTitle = '', onReanalyze, reanalyzing = false }) {
+export function ReportView({
+  insights,
+  contractTitle = '',
+  onReanalyze,
+  reanalyzing = false,
+  onLocate,
+}) {
   // Which finding cards are open. The first one is opened for the reader, so
   // the shape of a finding is obvious without a click.
   const [expanded, setExpanded] = useState(() => new Set([0]))
@@ -61,6 +68,7 @@ export function ReportView({ insights, contractTitle = '', onReanalyze, reanalyz
   const groups = groupObligationsByParty(report.obligations)
   const allExpanded = risks.length > 0 && expanded.size === risks.length
   const headline = reportHeadline(report)
+  const unverified = risks.filter((risk) => risk.quoteCheck?.status === 'not_found').length
 
   const toggleAll = () => {
     setExpanded(allExpanded ? new Set() : new Set(risks.map((_, index) => index)))
@@ -141,6 +149,15 @@ export function ReportView({ insights, contractTitle = '', onReanalyze, reanalyz
           This contract was too long to read in one pass, so it was split into {report.chunkCount}{' '}
           parts and the findings were combined. Detail can be lost at the joins - check any quotation
           against the original.
+        </Alert>
+      )}
+
+      {unverified > 0 && (
+        <Alert tone="warning" title={`${unverified} ${unverified === 1 ? 'quote' : 'quotes'} not found in the document`}>
+          Each finding’s quoted wording is checked against the document text.{' '}
+          {unverified === 1 ? 'One' : 'Some'} could not be found, so the AI may have paraphrased or
+          misread {unverified === 1 ? 'it' : 'them'}. Those findings are marked “Quote not found” -
+          check them against the original.
         </Alert>
       )}
 
@@ -252,6 +269,7 @@ export function ReportView({ insights, contractTitle = '', onReanalyze, reanalyz
                   risk={risk}
                   open={expanded.has(index)}
                   onToggle={() => toggleOne(index)}
+                  onLocate={onLocate}
                 />
               ))}
             </div>
@@ -273,6 +291,8 @@ export function ReportView({ insights, contractTitle = '', onReanalyze, reanalyz
           )}
         </CardBody>
       </Card>
+
+      <ChecklistCard items={report.checklist} />
 
       <CollapsibleSection
         title="Key terms"

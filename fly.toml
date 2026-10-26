@@ -1,0 +1,43 @@
+# Fly.io config for Pact Pulse: https://pactpulse.fly.dev
+# Deploy steps are in DEPLOY.md.
+
+app = "pactpulse"
+primary_region = "sin"   # Singapore. Pick the region closest to your MongoDB Atlas cluster.
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Non-secret settings. Secrets (keys, passwords) go in `fly secrets set`.
+  FRONTEND_ORIGIN = "https://pactpulse.fly.dev"
+  CORS_ORIGINS = "https://pactpulse.fly.dev"
+  CLIENT_IP_HEADER = "Fly-Client-IP"
+  UPLOAD_DIR = "/data/uploads"
+  QDRANT_PATH = "/data/qdrant"
+  MONGODB_DB_NAME = "pact_pulse"
+
+# Uploaded files and the chat's vector index live on a small persistent volume.
+[mounts]
+  source = "pactpulse_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # Sleep when nobody is using it, wake on the next visit. Pay only while running.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "40s"
+
+[[vm]]
+  # The embedding model needs more than 512 MB.
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1

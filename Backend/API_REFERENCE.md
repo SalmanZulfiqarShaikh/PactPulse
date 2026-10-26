@@ -1,8 +1,29 @@
 # Pact Pulse API Reference
 
-Version 2.0.0. Base URL in development: `http://127.0.0.1:8000`.
+Version 3.0.0. Base URL in development: `http://localhost:8000`.
 
 Interactive docs are at `/docs` (Swagger UI) and `/redoc`.
+
+---
+
+## What changed in 3.0.0
+
+Additive: a 2.x client keeps working.
+
+| Area | Now |
+|---|---|
+| Document chat | New: `GET/POST/DELETE /contracts/{id}/chat` and `POST /contracts/{id}/chat/reindex`. See [Chat](#chat) |
+| Scanned PDFs | No longer rejected. A PDF with little or no text layer is transcribed by Gemini (OCR); `text_source` is `"ocr"` |
+| Contracts | New fields `text_source` and `index_status` |
+| Contract status | Now `analyzing` while a job runs (before, it stayed at its old value until the job finished) |
+| Report | New `checklist` object, and every risk carries a `quote_check` saying whether its quote was found in the document |
+| Consistency | Analysis runs at temperature 0 with a fixed seed |
+| Upload size | Oversized uploads get `413` at the door instead of being fully received first |
+| Overlapping runs | A run that went stale and was replaced can no longer overwrite the newer run's result |
+| `GET /health` | Health check: `{status, version}`. `GET /` now serves the frontend when it's built |
+| Email verification | `POST /auth/register` returns `{email, verification_required}` and emails a code; `POST /auth/verify` signs in. Login on an unverified account returns `403` and sends a new code |
+| Daily limits | Per visitor IP: 5 analyses, 30 chat questions, 10 uploads. Over the limit is `429` with a message saying when it resets |
+| Fallback | With `GROQ_API_KEY` set, analysis and chat fall back to Groq when Gemini fails. `model` in the insights response says which model wrote the report |
 
 ---
 
@@ -48,7 +69,7 @@ a new access token *and* rotates the refresh cookie.
 
 ### `POST /auth/register`
 
-Creates an account and logs straight in.
+Creates an unverified account and emails a 6-digit code. Returns `201 {"email", "verification_required": true}`; sign-in happens at `POST /auth/verify`. Signing up again with an address that was never verified sets the new password and sends a fresh code.
 
 Rate limit: **5 requests per minute per IP**.
 
@@ -72,6 +93,17 @@ a refresh cookie is set.
 > **Note:** registration necessarily reveals whether an address is already
 > registered — the alternative is silently not creating the account. Login does
 > not, and that is the endpoint that matters for enumeration.
+
+### `POST /auth/verify`
+
+Body `{"email": "...", "code": "123456"}`. Confirms the emailed code, marks the
+address verified and signs in: returns the same token response as login and
+sets the refresh cookie. `400` for a wrong or expired code, or after 5 wrong tries.
+
+### `POST /auth/resend-code`
+
+Body `{"email": "..."}`. Sends a new code. Always `202`, whether or not the
+address exists. `429` if asked again within 60 seconds (or over 5 per hour per IP).
 
 ### `POST /auth/login`
 
@@ -183,6 +215,11 @@ contract, or not yours"; treat them as the same thing.
 `multipart/form-data`, field name `file`. Allowed types: **DOCX, PDF, TXT**. Max
 **10 MB**.
 
+A PDF averaging fewer than 80 extractable characters per page is treated as
+scanned and transcribed by Gemini, in batches of 10 pages. The request takes
+longer for those (tens of seconds for a long scan). After upload the document is
+indexed for chat in the background; watch `index_status`.
+
 **201 Created**
 
 ```json
@@ -195,6 +232,8 @@ contract, or not yours"; treat them as the same thing.
   "page_count": 1,
   "word_count": 942,
   "status": "uploaded",
+  "text_source": "text_layer",
+  "index_status": "not_indexed",
   "upload_date": "2026-10-12T08:30:52.922282+00:00",
   "text_content": "..."
 }
@@ -207,8 +246,9 @@ it is derived from the text length.
 
 | Error | When |
 |---|---|
-| `400` | Wrong extension, empty file, over 10 MB, or the text could not be extracted (corrupt or password-protected) |
+| `400` | Wrong extension, empty file, or the text could not be extracted (corrupt, password-protected, or a scan that OCR could not read) |
 | `401` | No valid token |
+| `413` | Over 10 MB. Rejected from `Content-Length` before the body is read, or as soon as the streamed body passes the limit |
 
 A parse failure happens at upload time, so an unreadable file is rejected
 immediately rather than failing later inside the analysis job.
@@ -340,6 +380,7 @@ New reports have `reading_level: "plain"`.
   "key_terms":  [ { "term": "…", "value": "…" } ],
   "obligations": [ { "party": "You", "obligation": "…" } ],
   "risks": [ … ],
+  "checklist": { "liability_cap": { "status": "missing", "note": "…" }, … },
   "chunk_count": 1,
   "reading_level": "plain"
 }
@@ -356,6 +397,7 @@ New reports have `reading_level: "plain"`.
 | `key_terms` | object[] | `{term, value}`, both in plain words |
 | `obligations` | object[] | `{party, obligation}`; `party` may be `"You"` |
 | `risks` | object[] | See below |
+| `checklist` | object | The same 12 keys on every report; see [Checklist](#checklist). Absent on reports made before 3.0.0 |
 | `chunk_count` | int | How many sections the document was split into. `> 1` means a merge call composed the summary |
 | `reading_level` | `"plain"` | Marks the v2 schema |
 
@@ -386,6 +428,25 @@ report with sections silently missing. `error` says so; retry.
 | `plain_explanation` | What it means in practice |
 | `what_to_do` | A concrete next step, or a note that the clause is standard |
 | `legal_note` | Optional. Technical or redline detail. May be absent |
+| `quote_check` | Added by the server: `{status, start, end, score}`. See below |
+
+`quote_check.status` is `exact` (found, ignoring whitespace, case and quote
+style), `close` (a fuzzy match scoring 90+/100, typically OCR noise) or
+`not_found` (treat the finding with suspicion). `start`/`end` are character
+offsets into the contract's `text_content`, for highlighting. Reports from
+before 3.0.0 are checked when they are read.
+
+### Checklist
+
+Every report answers the same questions, so runs and contracts can be compared.
+Keys: `liability_cap`, `indemnity`, `termination`, `auto_renewal`,
+`payment_terms`, `non_compete`, `confidentiality`, `ip_ownership`, `assignment`,
+`unilateral_changes`, `dispute_resolution`, `personal_guarantee`.
+
+Each is `{status, note}` with `status` one of `fine`, `needs_attention`,
+`missing` (silent where it matters) or `not_applicable`. For chunked contracts
+the checklist is merged by rule, not by the model: `needs_attention` beats
+`fine`, which beats `missing`, which beats `not_applicable`.
 
 ### Reading a report safely
 
@@ -410,6 +471,57 @@ shape you have, but still fall back per-field as above.
 
 ---
 
+## Chat
+
+Ask questions about one document. Agentic RAG, independent of the analysis: an
+agent (Gemini, or Groq as fallback) starts with no document text and retrieves
+what it needs - by meaning through the Qdrant vector index, by exact text, and
+by reading passages - then answers citing passages as `[P#]`. Each answer's `citations` resolve those numbers to character ranges.
+
+Passages are ~1,200-character overlapping slices of `text_content`, numbered
+from 1. Embeddings are computed locally with fastembed; vectors live in Qdrant.
+Every vector carries `contract_id` and `owner_id`, and every search filters on
+both.
+
+### `GET /contracts/{contract_id}/chat`
+
+```json
+{
+  "contract_id": "…",
+  "index_status": "not_indexed" | "indexing" | "ready" | "failed",
+  "index_error": null,
+  "messages": [
+    { "message_id": "…", "role": "user", "content": "How long is secrecy?", "citations": [], "created_at": "…" },
+    { "message_id": "…", "role": "assistant", "content": "Five years after the agreement ends [P3].",
+      "citations": [ { "passage": 3, "start": 2410, "end": 3602, "text": "…" } ], "created_at": "…" }
+  ]
+}
+```
+
+Poll until `index_status` is `ready`. A contract uploaded before 3.0.0 is
+indexed the first time this is called.
+
+### `POST /contracts/{contract_id}/chat`
+
+Body `{"message": "…"}` (1-4,000 characters). Returns `{question, answer}`, both
+in the message shape above. The thread is stored, and the last 12 messages are
+sent with each question so follow-ups work.
+
+| Error | When |
+|---|---|
+| `409` | The document is not indexed yet |
+| `429` | Over `CHAT_RATE_LIMIT` (default 20/minute per IP) |
+
+### `DELETE /contracts/{contract_id}/chat`
+
+Clears the conversation. `204`.
+
+### `POST /contracts/{contract_id}/chat/reindex`
+
+Rebuilds the document's vectors, e.g. after `index_status: "failed"`. `202`.
+
+---
+
 ## Errors
 
 Every error body is `{"detail": "..."}` — a single string.
@@ -419,15 +531,16 @@ Every error body is `{"detail": "..."}` — a single string.
 | `400` | Bad input: file type, size, empty file, unparseable document, nothing to analyse |
 | `401` | Not authenticated, or bad credentials. Also the single message for bad login |
 | `404` | Not found, **or exists but is not yours** |
-| `409` | Email already registered, or an analysis is already running |
+| `409` | Email already registered, an analysis is already running, or chat asked before indexing finished |
 | `422` | Request body failed validation (malformed email, password length) |
+| `413` | Upload larger than the limit |
 | `429` | Rate limited |
 | `500` | Server error. Not used for bad input |
 
-`429` body: `{"detail": "Too many attempts. Please wait a minute and try again."}`
+`429` body: `{"detail": "Too many requests. Please wait a minute and try again."}`
 
-Rate limits apply per client IP, to `POST /auth/login` (10/min) and
-`POST /auth/register` (5/min) only. Counters are held in process memory, so they
+Rate limits apply per client IP, to `POST /auth/login` (10/min),
+`POST /auth/register` (5/min) and `POST /contracts/{id}/chat` (20/min). Counters are held in process memory, so they
 reset on restart and are **not** shared between workers. See
 [Nothing here is a substitute for legal advice](#nothing-here-is-a-substitute-for-legal-advice).
 
@@ -447,21 +560,13 @@ every origin the frontend is served from, comma-separated.
 
 Changing `JWT_SECRET` invalidates every issued token, signing all users out.
 
-### Legacy contracts
+### Chat storage
 
-Contracts created before 2.0.0 have no `owner_id`. They are **invisible to every
-account** and cannot be reached through the API. To hand them to an account:
-
-```bash
-# Show what would change
-Backend/venv/Scripts/python.exe Backend/scripts/assign_legacy_contracts.py ada@example.com
-
-# Do it
-Backend/venv/Scripts/python.exe Backend/scripts/assign_legacy_contracts.py ada@example.com --apply
-```
-
-Analyses inherit their contract's owner, so an analysis can never end up
-belonging to a different account than its contract.
+By default Qdrant runs embedded, in `Backend/qdrant_data`. Embedded Qdrant
+allows one process at a time, so run a single worker, or set `QDRANT_URL` to a
+Qdrant server.
+The folder is derived data: delete it and documents re-index on their next
+chat visit (or via `/chat/reindex`). Changing `EMBEDDING_MODEL` requires that.
 
 ### Nothing here is a substitute for legal advice
 
@@ -476,6 +581,10 @@ incomplete, or overconfident. The client must display:
   shared across workers. Behind a proxy, every request may appear to come from
   the proxy unless `--proxy-headers` and a trusted `Forwarded`/`X-Forwarded-For`
   are configured — which would make the limit shared across all users.
+- **Background jobs run in-process.** Analysis and indexing use FastAPI
+  `BackgroundTasks`, not a queue. A restart mid-job strands it: analyses are
+  reported failed after 10 minutes, and chat indexing can be retried with
+  `/chat/reindex`.
 - **Access tokens cannot be revoked.** Logout stops new tokens being minted but
   an already-issued access token works until it expires, up to 20 minutes.
 - **The analysis job runs in-process.** A server restart mid-run strands the

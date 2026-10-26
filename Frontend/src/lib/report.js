@@ -1,3 +1,4 @@
+import { CHECKLIST_ITEMS, CHECK_STATUS_META } from './constants'
 import { sortRisks, severityMeta } from './severity'
 
 export const DISCLAIMER = 'Automated analysis. Review before relying on it.'
@@ -27,6 +28,9 @@ export function normaliseReport(insights) {
     plainExplanation: risk?.plain_explanation ?? risk?.explanation ?? '',
     whatToDo: risk?.what_to_do ?? risk?.recommendation ?? '',
     legalNote: risk?.legal_note || '',
+    // { status: 'exact' | 'close' | 'not_found', start, end } - where the quote
+    // sits in the document text. Absent on reports from before quote checking.
+    quoteCheck: risk?.quote_check ?? null,
   }))
 
   return {
@@ -44,8 +48,23 @@ export function normaliseReport(insights) {
       (item) => item?.obligation,
     ),
     risks: sortRisks(risks),
+    checklist: normaliseChecklist(insights.checklist),
     chunkCount: Number(insights.chunk_count) || 1,
   }
+}
+
+/** The checklist in display order, or [] for reports made before it existed. */
+function normaliseChecklist(checklist) {
+  if (!checklist || typeof checklist !== 'object') return []
+  return CHECKLIST_ITEMS.filter((item) => checklist[item.key]).map((item) => ({
+    ...item,
+    status: checklist[item.key].status,
+    note: checklist[item.key].note || '',
+  }))
+}
+
+export function checkStatusLabel(status) {
+  return CHECK_STATUS_META[status]?.label ?? 'Unknown'
 }
 
 function toStringList(value) {
@@ -165,9 +184,17 @@ function exportLines(contractTitle, report) {
       if (risk.plainExplanation) push(`   ${risk.plainExplanation}`)
       if (risk.whatToDo) push(`   What to do: ${risk.whatToDo}`)
       if (risk.legalNote) push(`   Legal detail: ${risk.legalNote}`)
-      if (risk.clauseText) push(`   Exact wording: "${risk.clauseText}"`)
+      if (risk.clauseText) push(`   Exact wording: "${risk.clauseText}"${quoteNote(risk)}`)
       push('')
     })
+  }
+
+  if (report.checklist.length) {
+    push('Clause checklist')
+    report.checklist.forEach((item) =>
+      push(`- ${item.label}: ${checkStatusLabel(item.status)}${item.note ? ` - ${item.note}` : ''}`),
+    )
+    push('')
   }
 
   if (report.keyTerms.length) {
@@ -191,6 +218,13 @@ function exportLines(contractTitle, report) {
 
   push(DISCLAIMER)
   return lines
+}
+
+/** A warning appended to quotes the server could not find in the document. */
+function quoteNote(risk) {
+  return risk.quoteCheck?.status === 'not_found'
+    ? ' (warning: this quote could not be found in the document)'
+    : ''
 }
 
 /** A clean plain-language summary, as text. */
@@ -231,8 +265,21 @@ export function reportToMarkdown(contractTitle, report) {
       if (risk.plainExplanation) out.push(risk.plainExplanation, '')
       if (risk.whatToDo) out.push(`**What to do:** ${risk.whatToDo}`, '')
       if (risk.legalNote) out.push(`**Legal detail:** ${risk.legalNote}`, '')
-      if (risk.clauseText) out.push('> ' + risk.clauseText.split('\n').join('\n> '), '')
+      if (risk.clauseText) {
+        out.push('> ' + risk.clauseText.split('\n').join('\n> '), '')
+        if (quoteNote(risk)) out.push('_Warning: this quote could not be found in the document._', '')
+      }
     })
+  }
+
+  if (report.checklist.length) {
+    out.push('## Clause checklist')
+    report.checklist.forEach((item) =>
+      out.push(
+        `- **${item.label}:** ${checkStatusLabel(item.status)}${item.note ? ` - ${item.note}` : ''}`,
+      ),
+    )
+    out.push('')
   }
 
   if (report.keyTerms.length) {

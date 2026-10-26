@@ -1,7 +1,8 @@
 import { useId, useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, LocateFixed } from 'lucide-react'
 
 import { SeverityBadge } from './SeverityBadge'
+import { QuoteCheckBadge } from './report/QuoteCheckBadge'
 import { cn } from '../lib/cn'
 
 /**
@@ -17,7 +18,7 @@ import { cn } from '../lib/cn'
  * `onToggle` to drive it from the parent (the report needs an expand-all
  * control); leave them off and it manages itself.
  */
-export function RiskCard({ risk, open: controlledOpen, onToggle, defaultOpen = false }) {
+export function RiskCard({ risk, open: controlledOpen, onToggle, defaultOpen = false, onLocate }) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen)
   const regionId = useId()
 
@@ -44,8 +45,9 @@ export function RiskCard({ risk, open: controlledOpen, onToggle, defaultOpen = f
 
           <span className="min-w-0 flex-1">
             <span className="block text-base font-medium">{risk.title || 'Untitled finding'}</span>
-            <span className="mt-2 flex">
+            <span className="mt-2 flex flex-wrap gap-2">
               <SeverityBadge severity={risk.severity} />
+              <QuoteCheckBadge check={risk.quoteCheck} />
             </span>
           </span>
         </button>
@@ -73,6 +75,17 @@ export function RiskCard({ risk, open: controlledOpen, onToggle, defaultOpen = f
             </section>
           )}
 
+          {canLocate(risk) && onLocate && (
+            <button
+              type="button"
+              onClick={() => onLocate(risk.quoteCheck)}
+              className="no-print inline-flex items-center gap-1.5 rounded text-sm font-medium text-accent-700 underline underline-offset-2 hover:text-accent-800 dark:text-accent-400 dark:hover:text-accent-300"
+            >
+              <LocateFixed className="h-3.5 w-3.5" aria-hidden="true" />
+              Show in document
+            </button>
+          )}
+
           {risk.clauseText && (
             <Disclosure label="Show exact wording">
               {/* Copied verbatim from the contract, so whitespace is preserved. */}
@@ -93,6 +106,10 @@ export function RiskCard({ risk, open: controlledOpen, onToggle, defaultOpen = f
       )}
     </div>
   )
+}
+
+function canLocate(risk) {
+  return risk.quoteCheck?.start != null && risk.quoteCheck?.end != null
 }
 
 /**

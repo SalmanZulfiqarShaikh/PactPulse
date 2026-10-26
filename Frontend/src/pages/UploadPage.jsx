@@ -17,7 +17,9 @@ function UploadProgress({ percent }) {
   return (
     <div>
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium">Uploading</span>
+        <span className="font-medium">
+          {percent < 100 ? 'Uploading' : 'Reading the document… scanned PDFs take a little longer'}
+        </span>
         <span className="tabular-nums text-stone-600 dark:text-stone-400">{percent}%</span>
       </div>
 
@@ -138,7 +140,7 @@ export function UploadPage() {
         <Card>
           <CardHeader
             title="Choose a file"
-            description="PDF, DOCX or TXT. Scanned image-only PDFs have no text to extract."
+            description="PDF, DOCX or TXT. Scanned PDFs are read with OCR."
           />
 
           <CardBody className="space-y-4">
@@ -213,9 +215,10 @@ export function UploadPage() {
           <CardHeader title="What happens next" />
           <CardBody>
             <ol className="space-y-2 text-sm text-stone-700 dark:text-stone-300">
-              <li>1. The document is parsed and its text stored.</li>
+              <li>1. The text is extracted (scanned PDFs are read with OCR).</li>
               <li>2. The analysis runs in the background, taking up to a few minutes.</li>
               <li>3. The contract page fills in the report as soon as it is ready.</li>
+              <li>4. Meanwhile you can ask the document questions in the chat panel.</li>
             </ol>
             {file && (
               <p className="mt-3 text-xs text-stone-500 dark:text-stone-400">

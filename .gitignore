@@ -1,11 +1,63 @@
-# Repository-wide ignores. Each app also has its own .gitignore for the files
-# that only matter to it (venv, node_modules, uploads, the local Mongo data
-# directory).
+# Pact Pulse - what stays off GitHub.
+# This file covers the whole repo on its own; Backend/ and Frontend/ have
+# smaller .gitignore files that say the same for their folder.
 
-# Local tooling and assistant state. Editor/agent config, not part of the app.
+# --- Secrets ------------------------------------------------------------------
+# API keys, the MongoDB password, the Gmail app password, the JWT secret.
+# Only the *.env.example templates are committed.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Dependencies (reinstalled from requirements.txt / package-lock.json) -----
+venv/
+.venv/
+env/
+node_modules/
+
+# --- Build output --------------------------------------------------------------
+Frontend/dist/
+dist/
+dist-ssr/
+build/
+*.egg-info/
+__pycache__/
+*.py[cod]
+
+# --- Runtime data (lives on the Fly volume or in Atlas, never in git) ---------
+# Uploaded contracts are users' private documents.
+uploads/
+qdrant_data/
+Backend/data/
+
+# --- Tests and dev-only files ---------------------------------------------------
+Backend/tests/
+Backend/requirements-dev.txt
+Backend/scripts/
+Backend/app/sample/
+Backend/docker-compose.yml
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Logs ----------------------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Editors, assistants, OS ---------------------------------------------------
 .claude/
-
-# OS cruft
+.vscode/
+.idea/
+*.swp
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# --- Fly.io local state ---------------------------------------------------------
+.fly/

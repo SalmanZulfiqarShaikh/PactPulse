@@ -1,28 +1,43 @@
+from enum import StrEnum
+
 from pydantic import BaseModel, Field
 
-UPLOADED = "uploaded"
-ANALYZING = "analyzing"
-ANALYZED = "analyzed"
-FAILED = "failed"
+
+class ContractStatus(StrEnum):
+    UPLOADED = "uploaded"
+    ANALYZING = "analyzing"
+    ANALYZED = "analyzed"
+    FAILED = "failed"
+
+
+class TextSource(StrEnum):
+    TEXT_LAYER = "text_layer"  # read straight from the file
+    OCR = "ocr"  # a scanned PDF, transcribed by Gemini
+
+
+class IndexStatus(StrEnum):
+    """Whether the document is ready for chat."""
+
+    NOT_INDEXED = "not_indexed"
+    INDEXING = "indexing"
+    READY = "ready"
+    FAILED = "failed"
 
 
 class Contract(BaseModel):
-    """A stored contract and the text extracted from it."""
-
-    contract_id: str = Field(..., description="Public identifier for the contract")
-    # Every read and write is scoped to this. A contract without an owner_id is
-    # invisible to every query, including the list endpoint, because the
-    # ownership filter can never match a missing field against a real user id.
-    owner_id: str = Field(..., description="user_id of the account that uploaded this contract")
-    filename: str = Field(..., description="Name the file is stored under on disk")
-    originalname: str = Field(..., description="Original name of the uploaded file")
-    content_type: str | None = Field(default=None, description="MIME type reported by the client")
-    size_bytes: int = Field(..., description="Size of the uploaded file in bytes")
-    upload_date: str = Field(..., description="ISO-8601 timestamp of when the contract was uploaded")
-    text_content: str = Field(..., description="Text extracted from the contract file")
-    page_count: int = Field(..., description="Number of pages (estimated for DOCX)")
-    word_count: int = Field(..., description="Number of words in the extracted text")
-    status: str = Field(
-        default=UPLOADED,
-        description="Analysis status: 'uploaded', 'analyzing', 'analyzed' or 'failed'",
-    )
+    contract_id: str
+    # Every query filters on this, so a contract is invisible to other accounts.
+    owner_id: str
+    filename: str = Field(description="Name the file is stored under on disk")
+    originalname: str
+    content_type: str | None = None
+    size_bytes: int
+    upload_date: str
+    text_content: str
+    text_source: TextSource = TextSource.TEXT_LAYER
+    page_count: int
+    word_count: int
+    status: ContractStatus = ContractStatus.UPLOADED
+    index_status: IndexStatus = IndexStatus.NOT_INDEXED
+    index_error: str | None = None
+    passage_count: int = 0

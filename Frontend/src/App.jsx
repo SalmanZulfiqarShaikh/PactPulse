@@ -9,6 +9,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { Landing } from './pages/Landing'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
+import { VerifyEmailPage } from './pages/VerifyEmailPage'
 import { Dashboard } from './pages/Dashboard'
 import { UploadPage } from './pages/UploadPage'
 import { ContractPage } from './pages/ContractPage'
@@ -41,6 +42,7 @@ export default function App() {
               <Route element={<PublicOnly />}>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/verify" element={<VerifyEmailPage />} />
               </Route>
 
               {/* Everything behind the session check. */}

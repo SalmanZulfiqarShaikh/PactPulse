@@ -1,28 +1,37 @@
-# Direct dependencies for Pact Pulse.
-# This file must stay UTF-8 encoded - it was previously UTF-16, which pip cannot
-# parse at all.
+# Direct dependencies for Pact Pulse. Python 3.12+ (built on 3.14).
 
+# Web
 fastapi==0.142.2
 uvicorn[standard]==0.54.0
+python-multipart==0.0.32
+slowapi==0.1.10
 
-# Database
+# Database (PyMongo's native async client)
 pymongo==4.18.2
 
 # Models and configuration
 pydantic==2.13.5
 pydantic-settings==2.15.0
-python-dotenv==1.2.4
 email-validator==2.3.0
 
-# Authentication and rate limiting
+# Authentication and sign-up email codes
 PyJWT==2.15.1
 argon2-cffi==25.1.0
-slowapi==0.1.10
+aiosmtplib==5.1.3
 
-# Uploads and document parsing
-python-multipart==0.0.32
+# Document parsing
 pypdf==6.19.0
+pypdfium2==5.14.0
 python-docx==1.2.0
 
-# Contract analysis
+# AI: analysis, OCR and the chat agent
 google-genai==2.29.0
+# Fallback when Gemini fails (quota, outage): set GROQ_API_KEY to enable
+groq==1.7.0
+
+# Document chat (RAG): local Hugging Face embeddings + Qdrant vector store
+fastembed==0.9.1
+qdrant-client==1.20.0
+
+# Quote checking (fuzzy matching)
+rapidfuzz==3.14.6

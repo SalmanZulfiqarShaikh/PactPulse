@@ -74,6 +74,12 @@ export function LoginPage() {
       await login({ email: normaliseEmail(email), password })
       navigate(returnTo, { replace: true })
     } catch (error) {
+      // 403 means the password was right but the email isn't verified yet. The
+      // server has just sent a fresh code, so go straight to entering it.
+      if (error?.status === 403) {
+        navigate('/verify', { state: { email: normaliseEmail(email), from: returnTo, resent: true } })
+        return
+      }
       // The API client already prefers the server's own message, which is what
       // a wrong password returns.
       setFormError(error?.message ?? 'Could not sign in. Please try again.')

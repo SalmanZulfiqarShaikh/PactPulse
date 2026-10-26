@@ -309,11 +309,16 @@ const enc = (value) => encodeURIComponent(value)
 
 export const api = {
   /** Backend liveness check. Open. Throws if the API is unreachable. */
-  health: (signal) => request('/', { auth: false, signal }),
+  health: (signal) => request('/health', { auth: false, signal }),
 
   // --- Auth. None of these attach a token, and none trigger a refresh. ---
   register: ({ email, password }) =>
     request('/auth/register', { method: 'POST', auth: false, body: { email, password } }),
+  /** Confirms the emailed 6-digit code. Signs in on success, like login. */
+  verifyEmail: ({ email, code }) =>
+    request('/auth/verify', { method: 'POST', auth: false, body: { email, code } }),
+  resendCode: (email) =>
+    request('/auth/resend-code', { method: 'POST', auth: false, body: { email } }),
   login: ({ email, password }) =>
     request('/auth/login', { method: 'POST', auth: false, body: { email, password } }),
   logout: () => request('/auth/logout', { method: 'POST', auth: false }),
@@ -347,6 +352,20 @@ export const api = {
 
   /** Analysis status and report. 404 means no analysis has ever been started. */
   getInsights: (contractId, signal) => request(`/analysis/${enc(contractId)}/insights`, { signal }),
+
+  // --- Document chat ---
+  /** The conversation so far, plus whether the document is ready for chat. */
+  getChat: (contractId, signal) => request(`/contracts/${enc(contractId)}/chat`, { signal }),
+
+  /** Ask a question. Resolves with { question, answer }; answers cite passages as [P#]. */
+  sendChat: (contractId, message, signal) =>
+    request(`/contracts/${enc(contractId)}/chat`, { method: 'POST', body: { message }, signal }),
+
+  clearChat: (contractId) => request(`/contracts/${enc(contractId)}/chat`, { method: 'DELETE' }),
+
+  /** Rebuild the document's search index, e.g. after it failed. */
+  reindexChat: (contractId) =>
+    request(`/contracts/${enc(contractId)}/chat/reindex`, { method: 'POST' }),
 
   uploadContract,
 }

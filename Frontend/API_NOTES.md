@@ -50,7 +50,7 @@ Two tokens, handled differently on purpose:
 
 `api.health`, `api.register`, `api.login`, `api.logout`, `api.refresh`, `api.listContracts`,
 `api.getContract`, `api.getSummary`, `api.deleteContract`, `api.analyze`, `api.getInsights`,
-`api.uploadContract` — all in `src/api/client.js`, which is the only file in the app that touches
+`api.uploadContract`, `api.getChat`, `api.sendChat`, `api.clearChat`, `api.reindexChat` — all in `src/api/client.js`, which is the only file in the app that touches
 `fetch` or `XMLHttpRequest`.
 
 Upload progress needs a progress event, which `fetch` does not report, so the upload uses
@@ -65,3 +65,14 @@ re-validating them. Reports written before 2.0.0 therefore still load, in the ol
 `src/lib/report.js` normalises both shapes field by field, so a partly-migrated report still renders.
 `reading_level === 'plain'` is the only thing that distinguishes them, and it is used solely to offer
 a re-analysis.
+
+Since 3.0.0 a report may also carry `checklist` (12 fixed keys, each `{status, note}`) and, on every
+risk, `quote_check` (`{status: 'exact' | 'close' | 'not_found', start, end}`). Both are optional in
+`normaliseReport`: older reports simply show no checklist and no quote badges.
+
+### Chat
+
+`useChat` loads `GET /contracts/{id}/chat` and polls it every 2 seconds while `index_status` is
+`not_indexed` or `indexing`. Sending is optimistic. Answers are Markdown with `[P#]` citations;
+`ChatMessage` turns those into chips, and each answer's `citations` array maps the numbers to
+character ranges that `DocumentText` highlights.

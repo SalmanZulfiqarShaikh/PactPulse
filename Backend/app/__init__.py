@@ -1,3 +1,3 @@
-"""Pact Pulse - AI powered contract analysis for advocates."""
+"""Pact Pulse - AI powered contract analysis and document chat."""
 
-__version__ = "1.0.0"
+__version__ = "3.0.0"
