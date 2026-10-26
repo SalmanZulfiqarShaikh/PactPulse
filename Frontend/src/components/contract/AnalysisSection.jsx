@@ -72,7 +72,7 @@ export function AnalysisSection({
         <CardHeader title="Analysis failed" />
         <CardBody className="space-y-4">
           <Alert tone="danger" title="The analysis did not complete">
-            {analysis?.error || 'The server did not report a reason.'}
+            {analysis?.error || 'Something went wrong. Please try again.'}
           </Alert>
           {startError && <Alert tone="danger">{startError.message}</Alert>}
           <Button onClick={start} loading={starting}>
@@ -92,7 +92,6 @@ export function AnalysisSection({
             <h2 className="text-sm font-semibold">Analysis report</h2>
             <p className="mt-0.5 text-sm text-stone-600 dark:text-stone-400">
               Completed {formatDateTime(analysis.completed_at)}
-              {analysis.model ? ` · ${analysis.model}` : ''}
             </p>
           </div>
           <Button variant="secondary" size="sm" onClick={start} loading={starting}>
@@ -135,7 +134,7 @@ function AnalyzingPanel({ startedAt, timedOut, onRefresh }) {
 
   return (
     <Card>
-      <CardHeader title="Analyzing" description="This runs on the server. You can leave this page open." />
+      <CardHeader title="Analyzing" description="You can leave this page. The analysis keeps going and will be here when you come back." />
       <CardBody className="space-y-4">
         <div className="flex items-center gap-3 text-sm" role="status" aria-live="polite">
           <Spinner />
@@ -149,9 +148,8 @@ function AnalyzingPanel({ startedAt, timedOut, onRefresh }) {
         </div>
 
         {timedOut ? (
-          <Alert tone="warning" title="Still running after ten minutes">
-            The server treats a job this old as stalled. Refresh to see the current state, or start
-            it again.
+          <Alert tone="warning" title="This is taking longer than usual">
+            Refresh to check on it, or start the analysis again.
           </Alert>
         ) : (
           <p className="text-xs text-stone-500 dark:text-stone-400">

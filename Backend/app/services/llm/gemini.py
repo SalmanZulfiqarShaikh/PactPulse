@@ -17,13 +17,17 @@ from Backend.app.core.errors import ServiceUnavailableError
 _TRANSIENT_STATUS_CODES = [408, 429, 500, 502, 503, 504]
 
 
-class LLMError(ServiceUnavailableError):
-    """Gemini could not produce a usable answer. The message is safe to show users.
+AI_BUSY = "Our AI service is busy right now. Please try again in a few minutes."
 
-    It is an AppError, so if it escapes a request (e.g. in chat) the client gets
-    a 503 with this message instead of a bare 500, which browsers report as
-    "could not reach the server" because a crash response carries no CORS headers.
+
+class LLMError(ServiceUnavailableError):
+    """No model could produce a usable answer.
+
+    The message names the provider and the cause, for the server log. Users
+    see ``AI_BUSY`` instead.
     """
+
+    public_detail = AI_BUSY
 
 
 @cache

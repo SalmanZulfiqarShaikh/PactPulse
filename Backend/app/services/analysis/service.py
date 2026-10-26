@@ -142,7 +142,10 @@ class AnalysisService:
             logger.exception("Analysis %s failed for contract %s.", run_id, contract_id)
             outcome = ContractStatus.FAILED
             message = (
-                str(exc) if isinstance(exc, LLMError) else "The analysis hit an unexpected error."
+                "We couldn't finish the analysis because our AI service is busy. "
+                "Please try again in a few minutes."
+                if isinstance(exc, LLMError)
+                else "Something went wrong while analysing this document. Please try again."
             )
             fields = {"status": outcome.value, "insights": None, "error": message}
 

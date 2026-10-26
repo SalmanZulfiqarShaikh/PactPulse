@@ -20,10 +20,13 @@ async def index_document(contract_id: str, owner_id: str) -> None:
             raise ValueError("The document has no text to index.")
         passages = split_passages(text)
         await vector_store.replace_document(contract_id, owner_id, passages)
-    except Exception as exc:  # noqa: BLE001 - recorded for the UI instead
+    except Exception:  # noqa: BLE001 - logged, and a plain message recorded for the UI
         logger.exception("Indexing failed for %s.", contract_id)
         await contracts.set_index_state(
-            contract_id, owner_id, IndexStatus.FAILED, error=f"Could not prepare chat: {exc}"
+            contract_id,
+            owner_id,
+            IndexStatus.FAILED,
+            error="We couldn't prepare this document for questions. Press Retry to try again.",
         )
         return
     await contracts.set_index_state(

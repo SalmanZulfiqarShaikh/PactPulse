@@ -23,11 +23,11 @@ export function ErrorState({ error, onRetry, title = 'Something went wrong', cla
       </div>
 
       <h3 className="mt-4 text-sm font-semibold">
-        {isAuth ? 'Your session has ended' : isNetwork ? 'Cannot reach the server' : title}
+        {isAuth ? 'Your session has ended' : isNetwork ? 'Connection problem' : title}
       </h3>
 
       <p className="mx-auto mt-1 max-w-md text-sm text-stone-600 dark:text-stone-400">
-        {error?.message || 'The request failed. Try again.'}
+        {error?.message || 'Please try again.'}
       </p>
 
       {onRetry && (

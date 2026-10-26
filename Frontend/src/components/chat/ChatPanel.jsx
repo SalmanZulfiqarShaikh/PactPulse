@@ -89,8 +89,7 @@ export function ChatPanel({ contractId, onLocate, onClose, className }) {
           <div className="flex items-start gap-3 rounded-md bg-stone-50 px-3 py-3 text-sm dark:bg-stone-950" role="status">
             <Spinner />
             <p className="text-stone-600 dark:text-stone-400">
-              Preparing the document for questions. This takes a few seconds (longer the first time,
-              while the search model downloads).
+              Getting the document ready for your questions. This takes a few seconds.
             </p>
           </div>
         )}
@@ -98,7 +97,7 @@ export function ChatPanel({ contractId, onLocate, onClose, className }) {
         {chat.indexStatus === 'failed' && (
           <Alert
             tone="danger"
-            title="The document could not be prepared for chat"
+            title="This document isn’t ready for questions yet"
             action={
               <Button size="sm" variant="secondary" onClick={chat.reindex}>
                 <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />

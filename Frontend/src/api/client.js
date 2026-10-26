@@ -16,7 +16,7 @@ export class ApiError extends Error {
 }
 
 const OFFLINE_MESSAGE =
-  'Could not reach the Pact Pulse API. Check that the backend is running and that VITE_API_URL points at it.'
+  'We couldn’t connect. Check your internet connection and try again.'
 
 // --- Session -----------------------------------------------------------------
 //
@@ -86,27 +86,26 @@ function messageForStatus(status, detail) {
 
   switch (status) {
     case 400:
-      return 'The server rejected this request.'
+    case 422:
+      return 'Something about that didn’t look right. Check it and try again.'
     case 401:
-      return 'Your session has ended. Sign in again.'
+      return 'Your session has ended. Please sign in again.'
     case 403:
-      return 'You do not have access to that.'
+      return 'You don’t have access to that.'
     case 404:
-      return 'Not found.'
+      return 'We couldn’t find that. It may have been deleted.'
     case 409:
-      return 'That is already in progress.'
+      return 'That’s already in progress.'
     case 413:
       return 'That file is too large.'
-    case 422:
-      return 'The request was malformed.'
     case 429:
       return 'Too many attempts. Please wait a minute and try again.'
-    case 500:
-      return 'The server hit an unexpected error.'
+    case 502:
     case 503:
-      return 'The server is not fully configured.'
+    case 504:
+      return 'We’re having trouble right now. Please try again in a few minutes.'
     default:
-      return `The server responded with an error (HTTP ${status}).`
+      return 'Something went wrong on our side. Please try again in a moment.'
   }
 }
 

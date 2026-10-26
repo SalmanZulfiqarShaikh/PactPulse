@@ -32,7 +32,9 @@ def parse_pdf(data: bytes) -> ParsedText:
             raise DocumentParseError(
                 "This PDF is password protected. Please upload an unprotected copy."
             ) from exc
-        raise DocumentParseError(f"Could not read the PDF: {exc}") from exc
+        raise DocumentParseError(
+            "We couldn't open this PDF. It may be damaged. Try saving or exporting it again."
+        ) from exc
 
     try:
         pages = [page.get_textpage().get_text_range() for page in document]
@@ -47,7 +49,9 @@ def parse_docx(data: bytes) -> ParsedText:
     try:
         document = Document(io.BytesIO(data))
     except Exception as exc:  # python-docx raises several unrelated types
-        raise DocumentParseError(f"Could not read the DOCX file: {exc}") from exc
+        raise DocumentParseError(
+            "We couldn't open this Word file. Try saving it again as .docx, or upload a PDF."
+        ) from exc
 
     blocks = [paragraph.text for paragraph in document.paragraphs]
     for table in document.tables:

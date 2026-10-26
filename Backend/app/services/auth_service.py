@@ -117,16 +117,16 @@ class AuthService:
     async def refresh(self, refresh_token: str | None) -> Session:
         """Rotate the refresh token and mint a new access token."""
         if not refresh_token:
-            raise UnauthorizedError("No refresh token.")
+            raise UnauthorizedError("Your session has ended. Please sign in again.")
         try:
             claims = security.decode_token(refresh_token, security.TokenType.REFRESH)
         except security.TokenError:
-            raise UnauthorizedError("Refresh token is invalid or has expired.") from None
+            raise UnauthorizedError("Your session has ended. Please sign in again.") from None
 
         user = await self.users.by_id(claims.user_id)
         # Logout bumps token_version, so a cookie from before a logout is dead.
         if user is None or claims.version != user.token_version:
-            raise UnauthorizedError("Refresh token is invalid or has expired.")
+            raise UnauthorizedError("Your session has ended. Please sign in again.")
         return _session(user.user_id, user.email, user.token_version)
 
     async def logout(self, refresh_token: str | None) -> None:
