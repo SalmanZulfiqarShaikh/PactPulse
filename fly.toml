@@ -1,5 +1,5 @@
 # Fly.io config for Pact Pulse: https://pactpulse.fly.dev
-# Deploy steps are in DEPLOY.md.
+# Deploy steps are in README.md.
 
 app = "pactpulse"
 primary_region = "sin"   # Singapore. Pick the region closest to your MongoDB Atlas cluster.

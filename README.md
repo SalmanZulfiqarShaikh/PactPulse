@@ -145,7 +145,6 @@ python -m venv venv
 venv\Scripts\activate          # macOS/Linux: source venv/bin/activate
 pip install -r requirements.txt
 copy .env.example .env         # macOS/Linux: cp .env.example .env
-# Fill in JWT_SECRET, MONGODB_URI and GEMINI_API_KEY
 cd ..
 python -m uvicorn Backend.app.main:app --reload
 
@@ -155,7 +154,21 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. Without SMTP settings, sign-up codes are printed in the backend log.
+Open http://localhost:5173. Use `localhost`, not `127.0.0.1`: the sign-in cookie treats them as
+different sites.
+
+### Configuration
+
+All settings live in `Backend/.env`. `Backend/.env.example` lists every option with a comment.
+
+| Variable | Required | What it's for |
+|---|---|---|
+| `JWT_SECRET` | yes | Signs sign-in tokens. At least 32 characters. |
+| `MONGODB_URI` | yes | MongoDB connection string |
+| `GEMINI_API_KEY` | yes | Analysis, OCR and chat |
+| `GROQ_API_KEY` | no | Fallback model when Gemini is rate-limited or down |
+| `SMTP_USER`, `SMTP_PASSWORD` | no | Gmail address and app password for verification emails. Without them, codes are printed in the backend log. |
+| `DAILY_ANALYSIS_LIMIT`, `DAILY_CHAT_LIMIT`, `DAILY_UPLOAD_LIMIT` | no | Per-IP daily limits (default 5, 30 and 10) |
 
 Generate a `JWT_SECRET` with:
 
@@ -165,19 +178,59 @@ python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 ---
 
-## Deploy
+## Deploy to Fly.io
 
-One Fly.io app serves both the API and the built frontend. See [DEPLOY.md](DEPLOY.md), or on Windows run:
+One Fly app serves both the API and the built frontend. MongoDB runs on Atlas. Uploaded files and
+the vector index live on a 1 GB Fly volume, and the embedding model is baked into the image. The
+machine stops when idle and wakes on the next request, so a demo costs close to nothing.
+
+**On Windows**, fill in `Backend/.env` and run:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\deploy.ps1
 ```
 
-The machine stops when idle and wakes on the next request, so a demo costs close to nothing.
+The script installs the Fly CLI if needed, logs you in, creates the app and volume if they don't
+exist, copies the secrets from `Backend/.env` into Fly, and deploys. Run it again to ship updates.
+
+**By hand:**
+
+```bash
+fly apps create pactpulse
+fly volumes create pactpulse_data --size 1 --region sin --app pactpulse
+fly secrets set --app pactpulse JWT_SECRET="..." MONGODB_URI="..." GEMINI_API_KEY="..." \
+  GROQ_API_KEY="..." SMTP_USER="you@gmail.com" SMTP_PASSWORD="..."
+fly deploy --ha=false
+```
+
+`--ha=false` keeps it to one machine, because the volume attaches to only one. In Atlas, allow
+`0.0.0.0/0` under Network Access. Logs: `fly logs --app pactpulse`.
 
 ---
 
 ## API
 
-Full reference in [Backend/API_REFERENCE.md](Backend/API_REFERENCE.md). Interactive docs are at
-`/docs` when running locally.
+Interactive docs are at `/docs` when running locally. Every route except sign-up, sign-in and
+`/health` needs an `Authorization: Bearer <token>` header.
+
+| Method | Path | |
+|---|---|---|
+| `POST` | `/auth/register` | Create an account and email a verification code |
+| `POST` | `/auth/verify` | Confirm the code and sign in |
+| `POST` | `/auth/resend-code` | Send a new code |
+| `POST` | `/auth/login` | Sign in |
+| `POST` | `/auth/refresh` | New access token from the refresh cookie |
+| `POST` | `/auth/logout` | Sign out everywhere |
+| `GET` | `/auth/me` | The signed-in user |
+| `POST` | `/contracts/upload` | Upload a PDF, DOCX or TXT (max 10 MB) |
+| `GET` | `/contracts` | List your contracts |
+| `GET` | `/contracts/{id}` | A contract with its full text |
+| `GET` | `/contracts/{id}/summary` | A contract without its text |
+| `DELETE` | `/contracts/{id}` | Delete a contract, its report and its chat |
+| `POST` | `/analysis/analyze/{id}` | Start an analysis (runs in the background) |
+| `GET` | `/analysis/{id}/insights` | Analysis status and report |
+| `GET` | `/contracts/{id}/chat` | Chat history |
+| `POST` | `/contracts/{id}/chat` | Ask a question |
+| `DELETE` | `/contracts/{id}/chat` | Clear the chat |
+| `POST` | `/contracts/{id}/chat/reindex` | Rebuild the document's search index |
+| `GET` | `/health` | Liveness check |
